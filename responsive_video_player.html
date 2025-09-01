@@ -382,8 +382,8 @@
                 item.className = 'chapter-item p-4 border-b border-gray-800 cursor-pointer transition-colors hover:bg-gray-800 relative';
                 item.innerHTML = `
                     <div class="chapter-time text-xs text-gray-400 font-mono mb-1">${this.formatTime(chapter.time)}</div>
-                    <div class="chapter-title font-semibold text-sm text-white mb-1">${chapter.title}</div>
-                    <div class="chapter-description text-xs text-gray-400 leading-snug">${chapter.description || ''}</div>
+                    <div class="chapter-title font-semibold text-base text-white mb-1.5">${chapter.title}</div>
+                    <div class="chapter-description text-sm text-gray-300 leading-relaxed">${chapter.description || ''}</div>
                 `;
                 item.addEventListener('click', () => this.jumpToChapter(index));
                 this.chaptersList.appendChild(item);
@@ -584,3 +584,4 @@
     </script>
 </body>
 </html>
+
