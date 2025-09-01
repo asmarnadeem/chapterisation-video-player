@@ -43,27 +43,27 @@
             <div class="space-y-4 text-left">
                 <!-- File Inputs -->
                 <div>
-                    <label class="block mb-1.5 text-sm font-medium text-gray-400">Select Video File:</label>
+                    <label class="block mb-1.5 text-lg font-medium text-gray-400">Select Video File:</label>
                     <input type="file" id="videoFile" class="file-input" accept="video/*">
                 </div>
                 <div>
-                    <label class="block mb-1.5 text-sm font-medium text-gray-400">Select Chapters File (JSON):</label>
+                    <label class="block mb-1.5 text-lg font-medium text-gray-400">Select Chapters File (JSON):</label>
                     <input type="file" id="chaptersFile" class="file-input" accept=".json">
                 </div>
                 
                 <div class="flex items-center text-gray-500">
                     <hr class="flex-grow border-gray-600">
-                    <span class="px-4 text-sm">OR</span>
+                    <span class="px-4 text-lg">OR</span>
                     <hr class="flex-grow border-gray-600">
                 </div>
 
                 <!-- URL Inputs -->
                 <div>
-                    <label class="block mb-1.5 text-sm font-medium text-gray-400">Video URL:</label>
+                    <label class="block mb-1.5 text-lg font-medium text-gray-400">Video URL:</label>
                     <input type="url" id="videoUrl" class="url-input" placeholder="https://example.com/video.mp4">
                 </div>
                 <div>
-                    <label class="block mb-1.5 text-sm font-medium text-gray-400">Chapters JSON URL:</label>
+                    <label class="block mb-1.5 text-lg font-medium text-gray-400">Chapters JSON URL:</label>
                     <input type="url" id="chaptersUrl" class="url-input" placeholder="https://example.com/chapters.json">
                 </div>
             </div>
@@ -73,9 +73,9 @@
                 <button class="load-btn bg-emerald-600 hover:bg-emerald-700 flex-1" id="demoBtn">Try Demo</button>
             </div>
             
-            <div id="errorMessage" class="text-rose-500 bg-rose-900/50 border border-rose-800 text-sm p-3 rounded-lg mt-4" style="display: none;"></div>
+            <div id="errorMessage" class="text-rose-500 bg-rose-900/50 border border-rose-800 text-lg p-3 rounded-lg mt-4" style="display: none;"></div>
             
-            <div class="text-xs text-gray-500 mt-6 p-3 bg-gray-900/50 rounded-lg">
+            <div class="text-lg text-gray-500 mt-6 p-3 bg-gray-900/50 rounded-lg">
                 <strong>Demo:</strong> Creates a sample video player with chapter navigation.<br>
                 <strong>JSON Format:</strong> [{"time": 0, "title": "Chapter 1", "description": "Desc..."}]
             </div>
@@ -87,7 +87,7 @@
         <!-- Video Section -->
         <main class="flex-1 flex flex-col bg-black relative min-h-0">
             <div class="absolute top-4 left-4 z-10">
-                 <div id="playerLogo" class="bg-black/60 text-white px-3 py-1.5 rounded-md font-bold text-sm">Chapter Player</div>
+                 <div id="playerLogo" class="bg-black/60 text-white px-3 py-1.5 rounded-md font-bold text-lg">Chapter Player</div>
             </div>
             <div class="absolute top-4 right-4 z-10 flex gap-2">
                  <button id="newVideoBtn" class="toolbar-btn">New Video</button>
@@ -96,8 +96,8 @@
             
             <!-- Current Chapter Overlay -->
             <div id="chapterOverlay" class="absolute top-20 right-4 bg-black/60 p-3 rounded-lg z-10 max-w-xs transition-opacity duration-300 opacity-0">
-                <div class="text-xs text-rose-400 font-bold mb-0.5 chapter-number">Chapter 1</div>
-                <div class="font-semibold text-sm chapter-title">Loading...</div>
+                <div class="text-lg text-rose-400 font-bold mb-0.5 chapter-number">Chapter 1</div>
+                <div class="font-semibold text-lg chapter-title">Loading...</div>
             </div>
 
             <div class="flex-1 w-full h-full relative group flex items-center justify-center">
@@ -117,7 +117,7 @@
                     </div>
                     <div class="flex items-center gap-4">
                         <button id="playBtn" class="text-white text-3xl hover:text-rose-500 transition-colors">▶</button>
-                        <span id="timeDisplay" class="text-sm font-mono text-gray-300 w-32">0:00 / 0:00</span>
+                        <span id="timeDisplay" class="text-lg font-mono text-gray-300 w-32">0:00 / 0:00</span>
                         <div class="flex-1"></div>
                         <div class="flex items-center gap-2 group/volume">
                              <button id="volumeBtn" class="text-2xl">🔊</button>
@@ -133,7 +133,7 @@
         <aside class="w-full lg:w-96 lg:max-w-sm flex-shrink-0 bg-gray-900 border-t-2 lg:border-t-0 lg:border-l-2 border-gray-800 flex flex-col h-64 lg:h-full">
             <header class="p-4 border-b-2 border-gray-800 flex-shrink-0">
                 <h3 id="videoTitle" class="font-bold text-white truncate">Demo Content</h3>
-                <p id="videoInfo" class="text-xs text-gray-400">Click demo to start</p>
+                <p id="videoInfo" class="text-lg text-gray-400">Click demo to start</p>
             </header>
             <div id="chaptersList" class="overflow-y-auto flex-1">
                 <div class="p-10 text-center text-gray-500">Select a video to load chapters</div>
@@ -143,10 +143,10 @@
 
     <!-- Injecting shared Tailwind classes via a style tag for cleaner HTML -->
     <style>
-        .file-input { @apply w-full p-3 bg-gray-700 border-2 border-dashed border-gray-500 rounded-lg text-white text-sm cursor-pointer transition-colors duration-200 hover:border-rose-500; }
-        .url-input { @apply w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-colors; }
-        .load-btn { @apply text-white border-none px-6 py-3 rounded-lg text-base font-semibold cursor-pointer transition-colors duration-200 disabled:bg-gray-600 disabled:cursor-not-allowed; }
-        .toolbar-btn { @apply bg-black/60 text-white px-3 py-1.5 rounded-md font-semibold text-xs cursor-pointer transition-colors hover:bg-rose-600; }
+        .file-input { @apply w-full p-3 bg-gray-700 border-2 border-dashed border-gray-500 rounded-lg text-white text-lg cursor-pointer transition-colors duration-200 hover:border-rose-500; }
+        .url-input { @apply w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-lg focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-colors; }
+        .load-btn { @apply text-white border-none px-6 py-3 rounded-lg text-lg font-semibold cursor-pointer transition-colors duration-200 disabled:bg-gray-600 disabled:cursor-not-allowed; }
+        .toolbar-btn { @apply bg-black/60 text-white px-3 py-1.5 rounded-md font-semibold text-lg cursor-pointer transition-colors hover:bg-rose-600; }
     </style>
 
     <script>
@@ -359,7 +359,7 @@
                 marker.style.left = `${(chapter.time / duration) * 100}%`;
                 
                 const tooltip = document.createElement('div');
-                tooltip.className = 'chapter-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover/progress:opacity-100 pointer-events-none transition-opacity';
+                tooltip.className = 'chapter-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black/80 text-white px-2 py-1 rounded text-lg whitespace-nowrap opacity-0 group-hover/progress:opacity-100 pointer-events-none transition-opacity';
                 tooltip.textContent = chapter.title;
                 marker.appendChild(tooltip);
                 
@@ -381,9 +381,9 @@
                 const item = document.createElement('div');
                 item.className = 'chapter-item p-4 border-b border-gray-800 cursor-pointer transition-colors hover:bg-gray-800 relative';
                 item.innerHTML = `
-                    <div class="chapter-time text-xs text-gray-400 font-mono mb-1">${this.formatTime(chapter.time)}</div>
-                    <div class="chapter-title font-semibold text-base text-white mb-1.5">${chapter.title}</div>
-                    <div class="chapter-description text-sm text-gray-300 leading-relaxed">${chapter.description || ''}</div>
+                    <div class="chapter-time text-lg text-gray-400 font-mono mb-1">${this.formatTime(chapter.time)}</div>
+                    <div class="chapter-title font-semibold text-lg text-white mb-1.5">${chapter.title}</div>
+                    <div class="chapter-description text-lg text-gray-300 leading-relaxed">${chapter.description || ''}</div>
                 `;
                 item.addEventListener('click', () => this.jumpToChapter(index));
                 this.chaptersList.appendChild(item);
