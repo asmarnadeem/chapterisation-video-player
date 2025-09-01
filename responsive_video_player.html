@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Chapter Video Player</title>
+    <!-- Tailwind CSS for modern, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* A little custom CSS for the volume and progress bar thumbs for better cross-browser consistency */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #f43f5e;
+            cursor: pointer;
+            border-radius: 50%;
+            margin-top: -6px;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #f43f5e;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-black text-white font-sans antialiased h-full overflow-hidden">
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50 transition-opacity duration-500 hidden">
+        <div class="w-12 h-12 border-4 border-gray-700 border-t-rose-600 rounded-full animate-spin mb-4"></div>
+        <div id="loadingText" class="text-gray-300">Loading video and chapters...</div>
+    </div>
+
+    <!-- File Selector Modal -->
+    <div id="fileSelector" class="fixed inset-0 bg-gray-900 flex items-center justify-center z-40 p-4">
+        <div class="bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl max-w-lg w-full text-center border border-gray-700">
+            <h2 class="text-2xl sm:text-3xl font-bold mb-4 text-white">Chapter Video Player</h2>
+            
+            <div class="space-y-4 text-left">
+                <!-- File Inputs -->
+                <div>
+                    <label class="block mb-1.5 text-sm font-medium text-gray-400">Select Video File:</label>
+                    <input type="file" id="videoFile" class="file-input" accept="video/*">
+                </div>
+                <div>
+                    <label class="block mb-1.5 text-sm font-medium text-gray-400">Select Chapters File (JSON):</label>
+                    <input type="file" id="chaptersFile" class="file-input" accept=".json">
+                </div>
+                
+                <div class="flex items-center text-gray-500">
+                    <hr class="flex-grow border-gray-600">
+                    <span class="px-4 text-sm">OR</span>
+                    <hr class="flex-grow border-gray-600">
+                </div>
+
+                <!-- URL Inputs -->
+                <div>
+                    <label class="block mb-1.5 text-sm font-medium text-gray-400">Video URL:</label>
+                    <input type="url" id="videoUrl" class="url-input" placeholder="https://example.com/video.mp4">
+                </div>
+                <div>
+                    <label class="block mb-1.5 text-sm font-medium text-gray-400">Chapters JSON URL:</label>
+                    <input type="url" id="chaptersUrl" class="url-input" placeholder="https://example.com/chapters.json">
+                </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-3 mt-6">
+                <button class="load-btn bg-rose-600 hover:bg-rose-700 flex-1" id="loadBtn">Load Video</button>
+                <button class="load-btn bg-emerald-600 hover:bg-emerald-700 flex-1" id="demoBtn">Try Demo</button>
+            </div>
+            
+            <div id="errorMessage" class="text-rose-500 bg-rose-900/50 border border-rose-800 text-sm p-3 rounded-lg mt-4" style="display: none;"></div>
+            
+            <div class="text-xs text-gray-500 mt-6 p-3 bg-gray-900/50 rounded-lg">
+                <strong>Demo:</strong> Creates a sample video player with chapter navigation.<br>
+                <strong>JSON Format:</strong> [{"time": 0, "title": "Chapter 1", "description": "Desc..."}]
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Player Container -->
+    <div id="videoContainer" class="h-full flex flex-col lg:flex-row" style="display: none;">
+        <!-- Video Section -->
+        <main class="flex-1 flex flex-col bg-black relative min-h-0">
+            <div class="absolute top-4 left-4 z-10">
+                 <div id="playerLogo" class="bg-black/60 text-white px-3 py-1.5 rounded-md font-bold text-sm">Chapter Player</div>
+            </div>
+            <div class="absolute top-4 right-4 z-10 flex gap-2">
+                 <button id="newVideoBtn" class="toolbar-btn">New Video</button>
+                 <button id="downloadChaptersBtn" class="toolbar-btn">Export Chapters</button>
+            </div>
+            
+            <!-- Current Chapter Overlay -->
+            <div id="chapterOverlay" class="absolute top-20 right-4 bg-black/60 p-3 rounded-lg z-10 max-w-xs transition-opacity duration-300 opacity-0">
+                <div class="text-xs text-rose-400 font-bold mb-0.5 chapter-number">Chapter 1</div>
+                <div class="font-semibold text-sm chapter-title">Loading...</div>
+            </div>
+
+            <div class="flex-1 w-full h-full relative group flex items-center justify-center">
+                <video id="videoPlayer" preload="metadata" class="w-full h-full object-contain" style="display: none;"></video>
+
+                <div id="placeholderVideo" class="w-full h-full bg-gray-900 flex flex-col items-center justify-center p-4">
+                     <div class="text-6xl mb-4">🎥</div>
+                     <div id="placeholderTitle" class="text-xl font-bold text-gray-200">Demo Video Player</div>
+                     <div id="placeholderSubtitle" class="text-gray-400 mt-1">Click play to start demo</div>
+                </div>
+
+                <!-- Custom Controls -->
+                <div id="customControls" class="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-300">
+                    <div id="progressBar" class="w-full h-2 bg-white/20 rounded-full cursor-pointer relative group/progress mb-3">
+                        <div id="progressFill" class="h-full bg-rose-600 rounded-full"></div>
+                        <!-- Chapter markers will be injected here by JS -->
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button id="playBtn" class="text-white text-3xl hover:text-rose-500 transition-colors">▶</button>
+                        <span id="timeDisplay" class="text-sm font-mono text-gray-300 w-32">0:00 / 0:00</span>
+                        <div class="flex-1"></div>
+                        <div class="flex items-center gap-2 group/volume">
+                             <button id="volumeBtn" class="text-2xl">🔊</button>
+                             <input type="range" id="volumeSlider" min="0" max="100" value="100" class="w-0 group-hover/volume:w-24 h-1 bg-white/20 rounded-full outline-none transition-all duration-300 cursor-pointer accent-rose-600">
+                        </div>
+                        <button id="fullscreenBtn" class="text-2xl hover:text-rose-500 transition-colors">⛶</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Chapters Panel -->
+        <aside class="w-full lg:w-96 lg:max-w-sm flex-shrink-0 bg-gray-900 border-t-2 lg:border-t-0 lg:border-l-2 border-gray-800 flex flex-col h-64 lg:h-full">
+            <header class="p-4 border-b-2 border-gray-800 flex-shrink-0">
+                <h3 id="videoTitle" class="font-bold text-white truncate">Demo Content</h3>
+                <p id="videoInfo" class="text-xs text-gray-400">Click demo to start</p>
+            </header>
+            <div id="chaptersList" class="overflow-y-auto flex-1">
+                <div class="p-10 text-center text-gray-500">Select a video to load chapters</div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Injecting shared Tailwind classes via a style tag for cleaner HTML -->
+    <style>
+        .file-input { @apply w-full p-3 bg-gray-700 border-2 border-dashed border-gray-500 rounded-lg text-white text-sm cursor-pointer transition-colors duration-200 hover:border-rose-500; }
+        .url-input { @apply w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-colors; }
+        .load-btn { @apply text-white border-none px-6 py-3 rounded-lg text-base font-semibold cursor-pointer transition-colors duration-200 disabled:bg-gray-600 disabled:cursor-not-allowed; }
+        .toolbar-btn { @apply bg-black/60 text-white px-3 py-1.5 rounded-md font-semibold text-xs cursor-pointer transition-colors hover:bg-rose-600; }
+    </style>
+
+    <script>
+    class ChapterVideoPlayer {
+        constructor() {
+            this.video = document.getElementById('videoPlayer');
+            this.chapters = [];
+            this.currentChapterIndex = 0;
+            this.isPlaying = false;
+            this.isDemoMode = false;
+            this.demoTime = 0;
+            this.demoDuration = 1607; // 26:47 in seconds
+            this.demoInterval = null;
+            
+            this.initializeElements();
+            this.bindEvents();
+            this.checkUrlParams();
+            
+            this.setupDemo(); // Start with demo ready
+        }
+
+        initializeElements() {
+            this.loadingScreen = document.getElementById('loadingScreen');
+            this.fileSelector = document.getElementById('fileSelector');
+            this.videoContainer = document.getElementById('videoContainer');
+            this.errorMessage = document.getElementById('errorMessage');
+            this.placeholderVideo = document.getElementById('placeholderVideo');
+            
+            // Video controls
+            this.playBtn = document.getElementById('playBtn');
+            this.progressBar = document.getElementById('progressBar');
+            this.progressFill = document.getElementById('progressFill');
+            this.timeDisplay = document.getElementById('timeDisplay');
+            this.volumeSlider = document.getElementById('volumeSlider');
+            this.volumeBtn = document.getElementById('volumeBtn');
+            
+            // Chapter elements
+            this.chaptersList = document.getElementById('chaptersList');
+            this.chapterOverlay = document.getElementById('chapterOverlay');
+            this.videoTitle = document.getElementById('videoTitle');
+            this.videoInfo = document.getElementById('videoInfo');
+        }
+
+        bindEvents() {
+            document.getElementById('loadBtn').addEventListener('click', () => this.loadVideo());
+            document.getElementById('demoBtn').addEventListener('click', () => this.startDemo());
+            document.getElementById('newVideoBtn').addEventListener('click', () => this.showFileSelector());
+            document.getElementById('downloadChaptersBtn').addEventListener('click', () => this.downloadChapters());
+
+            this.video.addEventListener('loadedmetadata', () => this.onVideoLoaded());
+            this.video.addEventListener('timeupdate', () => this.updateDisplay());
+            this.video.addEventListener('ended', () => this.onVideoEnded());
+            this.video.addEventListener('error', (e) => this.onVideoError(e));
+            this.video.addEventListener('play', () => { this.isPlaying = true; this.playBtn.innerHTML = '⏸'; });
+            this.video.addEventListener('pause', () => { this.isPlaying = false; this.playBtn.innerHTML = '▶'; });
+
+
+            this.playBtn.addEventListener('click', () => this.togglePlay());
+            this.progressBar.addEventListener('click', (e) => this.seekVideo(e));
+            this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
+            document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
+
+            document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        }
+
+        checkUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const videoUrl = params.get('video');
+            const chaptersUrl = params.get('chapters');
+            
+            if (videoUrl) {
+                document.getElementById('videoUrl').value = videoUrl;
+                if (chaptersUrl) {
+                    document.getElementById('chaptersUrl').value = chaptersUrl;
+                }
+                this.loadVideo();
+            }
+        }
+
+        setupDemo() {
+            this.isDemoMode = true;
+            this.chapters = [
+                {time: 0, title: "Headlines", description: "Tonight's top stories: East Midlands soldiers in Kosovo, Leicester parking plans, and cricket season begins"},
+                {time: 69, title: "Kosovo Mission", description: "Exclusive report with Royal Lancers peacekeeping troops in Kosovo"},
+                {time: 264, title: "Military Analysis", description: "Expert discussion on the Royal Lancers' history and potential future Ukraine deployment"},
+                {time: 349, title: "Leicester Parking Row", description: "Residents divided over new permit parking scheme in Evington Road area"},
+                {time: 517, title: "Election Campaign Launch", description: "Keir Starmer visits Bolsover to launch Labour's local election campaign"},
+                {time: 718, title: "Paul Whitehouse Interview", description: "The Fast Show star talks Only Fools and Horses musical"},
+                {time: 942, title: "Cricket Preview", description: "New season starts tomorrow - Charlie Slater at Derbyshire"},
+                {time: 1153, title: "Football Results", description: "Leicester beaten again, but wins for Derby County and Notts County"},
+                {time: 1464, title: "Weather", description: "Dry and settled through the week, cooler weekend ahead"}
+            ];
+
+            this.videoTitle.textContent = 'BBC East Midlands Today (Demo)';
+            this.hideFileSelector();
+            this.showVideoContainer();
+            this.updateVideoInfo();
+            this.createChapterMarkers();
+            this.populateChaptersList();
+            this.updateDisplay();
+        }
+
+        startDemo() {
+            this.setupDemo();
+            this.playBtn.innerHTML = '⏸';
+            this.isPlaying = true;
+            this.placeholderVideo.querySelector('#placeholderSubtitle').textContent = 'Demo playing - Chapter navigation active';
+            
+            if (this.demoInterval) clearInterval(this.demoInterval);
+            this.demoInterval = setInterval(() => {
+                if (this.isPlaying && this.isDemoMode) {
+                    this.demoTime += 1;
+                    if (this.demoTime >= this.demoDuration) {
+                        this.demoTime = this.demoDuration;
+                        this.onVideoEnded();
+                    }
+                    this.updateDisplay();
+                }
+            }, 1000);
+        }
+
+        async loadVideo() {
+            try {
+                this.showLoading('Loading video and chapters...');
+                this.clearError();
+                this.resetPlayer();
+
+                const videoFile = document.getElementById('videoFile').files[0];
+                const chaptersFile = document.getElementById('chaptersFile').files[0];
+                const videoUrl = document.getElementById('videoUrl').value;
+                const chaptersUrl = document.getElementById('chaptersUrl').value;
+
+                if (videoFile) {
+                    this.video.src = URL.createObjectURL(videoFile);
+                    this.videoTitle.textContent = videoFile.name;
+                } else if (videoUrl) {
+                    this.video.src = videoUrl;
+                    this.videoTitle.textContent = this.getFilenameFromUrl(videoUrl);
+                } else {
+                    throw new Error('Please select a video file or enter a video URL');
+                }
+
+                if (chaptersFile) {
+                    const chaptersText = await chaptersFile.text();
+                    this.chapters = JSON.parse(chaptersText);
+                } else if (chaptersUrl) {
+                    const response = await fetch(chaptersUrl);
+                    if (!response.ok) throw new Error('Failed to load chapters file from URL');
+                    this.chapters = await response.json();
+                } else {
+                    this.chapters = [];
+                }
+
+                this.video.load();
+                
+            } catch (error) {
+                console.error('Error loading video:', error);
+                this.showError(error.message);
+                this.hideLoading();
+            }
+        }
+
+        onVideoLoaded() {
+            this.hideLoading();
+            this.hideFileSelector();
+            this.showVideoContainer();
+            this.placeholderVideo.style.display = 'none';
+            this.video.style.display = 'block';
+            this.updateVideoInfo();
+            this.createChapterMarkers();
+            this.populateChaptersList();
+            this.updateDisplay();
+        }
+        
+        onVideoError(e) {
+            console.error('Video error:', e);
+            let message = 'Failed to load video. The file may be corrupt or the format is not supported.';
+            if(this.video.src.startsWith('http')) {
+                message = 'Failed to load video from URL. Please check for CORS issues or if the URL is correct.';
+            }
+            this.showError(message);
+            this.hideLoading();
+        }
+        
+        resetPlayer() {
+            if(this.demoInterval) clearInterval(this.demoInterval);
+            this.isDemoMode = false;
+            this.demoTime = 0;
+            if(this.video.src) {
+                URL.revokeObjectURL(this.video.src);
+                this.video.removeAttribute('src');
+                this.video.load();
+            }
+        }
+
+        updateVideoInfo() {
+            const duration = this.isDemoMode ? this.demoDuration : (this.video.duration || 0);
+            this.videoInfo.textContent = `${this.formatTime(duration)} • ${this.chapters.length} chapters ${this.isDemoMode ? '• Demo Mode' : ''}`;
+        }
+
+        createChapterMarkers() {
+            const existingMarkers = this.progressBar.querySelectorAll('.chapter-marker');
+            existingMarkers.forEach(marker => marker.remove());
+            if (this.chapters.length === 0) return;
+
+            const duration = this.isDemoMode ? this.demoDuration : (this.video.duration || 1);
+            this.chapters.forEach((chapter, index) => {
+                const marker = document.createElement('div');
+                marker.className = 'chapter-marker absolute top-[-2px] h-3 w-1 bg-white rounded-full cursor-pointer opacity-80 hover:opacity-100 hover:scale-y-150 transition-transform';
+                marker.style.left = `${(chapter.time / duration) * 100}%`;
+                
+                const tooltip = document.createElement('div');
+                tooltip.className = 'chapter-tooltip absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black/80 text-white px-2 py-1 rounded text-xs whitespace-nowrap opacity-0 group-hover/progress:opacity-100 pointer-events-none transition-opacity';
+                tooltip.textContent = chapter.title;
+                marker.appendChild(tooltip);
+                
+                marker.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.jumpToChapter(index);
+                });
+                this.progressBar.appendChild(marker);
+            });
+        }
+        
+        populateChaptersList() {
+            if (this.chapters.length === 0) {
+                this.chaptersList.innerHTML = '<div class="p-10 text-center text-gray-500">No chapters available</div>';
+                return;
+            }
+            this.chaptersList.innerHTML = '';
+            this.chapters.forEach((chapter, index) => {
+                const item = document.createElement('div');
+                item.className = 'chapter-item p-4 border-b border-gray-800 cursor-pointer transition-colors hover:bg-gray-800 relative';
+                item.innerHTML = `
+                    <div class="chapter-time text-xs text-gray-400 font-mono mb-1">${this.formatTime(chapter.time)}</div>
+                    <div class="chapter-title font-semibold text-sm text-white mb-1">${chapter.title}</div>
+                    <div class="chapter-description text-xs text-gray-400 leading-snug">${chapter.description || ''}</div>
+                `;
+                item.addEventListener('click', () => this.jumpToChapter(index));
+                this.chaptersList.appendChild(item);
+            });
+        }
+
+        jumpToChapter(index) {
+            if (index >= 0 && index < this.chapters.length) {
+                if (this.isDemoMode) {
+                    this.demoTime = this.chapters[index].time;
+                } else {
+                    this.video.currentTime = this.chapters[index].time;
+                }
+                this.updateDisplay();
+                this.showChapterOverlay(this.chapters[index], index);
+            }
+        }
+
+        updateProgress() {
+            const currentTime = this.isDemoMode ? this.demoTime : (this.video.currentTime || 0);
+            const duration = this.isDemoMode ? this.demoDuration : (this.video.duration || 1);
+            const progress = (currentTime / duration) * 100;
+            this.progressFill.style.width = `${progress}%`;
+            this.timeDisplay.textContent = `${this.formatTime(currentTime)} / ${this.formatTime(duration)}`;
+        }
+
+        updateCurrentChapter() {
+            if (this.chapters.length === 0) return;
+            const currentTime = this.isDemoMode ? this.demoTime : (this.video.currentTime || 0);
+            let newChapterIndex = 0;
+            
+            for (let i = this.chapters.length - 1; i >= 0; i--) {
+                if (currentTime >= this.chapters[i].time) {
+                    newChapterIndex = i;
+                    break;
+                }
+            }
+            
+            if (newChapterIndex !== this.currentChapterIndex) {
+                this.currentChapterIndex = newChapterIndex;
+                this.updateChapterHighlights();
+                this.showChapterOverlay(this.chapters[this.currentChapterIndex], newChapterIndex);
+            }
+        }
+
+        updateChapterHighlights() {
+            const items = document.querySelectorAll('.chapter-item');
+            items.forEach((item, index) => {
+                if (index === this.currentChapterIndex) {
+                    item.classList.add('bg-rose-600/20');
+                    item.style.borderLeft = '4px solid #f43f5e';
+                } else {
+                    item.classList.remove('bg-rose-600/20');
+                    item.style.borderLeft = 'none';
+                }
+            });
+        }
+
+        showChapterOverlay(chapter, index) {
+            if (!chapter) return;
+            this.chapterOverlay.querySelector('.chapter-number').textContent = `Chapter ${index + 1}`;
+            this.chapterOverlay.querySelector('.chapter-title').textContent = chapter.title;
+            this.chapterOverlay.classList.remove('opacity-0');
+            if (this.chapterOverlay.timeout) clearTimeout(this.chapterOverlay.timeout);
+            this.chapterOverlay.timeout = setTimeout(() => this.chapterOverlay.classList.add('opacity-0'), 3000);
+        }
+
+        togglePlay() {
+            if (this.isDemoMode) {
+                this.isPlaying = !this.isPlaying;
+                this.playBtn.innerHTML = this.isPlaying ? '⏸' : '▶';
+                if(this.isPlaying && this.demoTime >= this.demoDuration) {
+                    this.demoTime = 0; // Restart if at end
+                }
+                if(this.isPlaying && !this.demoInterval) {
+                     this.startDemo();
+                }
+            } else {
+                this.video.paused ? this.video.play() : this.video.pause();
+            }
+        }
+
+        seekVideo(e) {
+            const rect = this.progressBar.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+            
+            if (this.isDemoMode) {
+                this.demoTime = percentage * this.demoDuration;
+            } else if (this.video.duration) {
+                this.video.currentTime = percentage * this.video.duration;
+            }
+            this.updateDisplay();
+        }
+
+        setVolume(value) {
+            if (!this.isDemoMode) this.video.volume = value / 100;
+            this.volumeBtn.textContent = value > 0 ? '🔊' : '🔇';
+        }
+
+        toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                this.videoContainer.requestFullscreen().catch(err => {
+                    alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        handleKeyboard(e) {
+            if (!this.videoContainer || this.videoContainer.style.display === 'none') return;
+            const activeElement = document.activeElement;
+            if (activeElement.tagName === 'INPUT') return; // Ignore keypresses in input fields
+            
+            switch(e.code) {
+                case 'Space': e.preventDefault(); this.togglePlay(); break;
+                case 'ArrowLeft': this.seekRelative(-10); break;
+                case 'ArrowRight': this.seekRelative(10); break;
+                case 'ArrowUp': e.preventDefault(); this.jumpToChapter(this.currentChapterIndex - 1); break;
+                case 'ArrowDown': e.preventDefault(); this.jumpToChapter(this.currentChapterIndex + 1); break;
+                case 'KeyF': e.preventDefault(); this.toggleFullscreen(); break;
+            }
+        }
+
+        seekRelative(delta) {
+             if (this.isDemoMode) {
+                this.demoTime = Math.max(0, Math.min(this.demoDuration, this.demoTime + delta));
+            } else {
+                this.video.currentTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + delta));
+            }
+            this.updateDisplay();
+        }
+
+        onVideoEnded() {
+            this.playBtn.innerHTML = '▶';
+            this.isPlaying = false;
+            if (this.isDemoMode && this.demoInterval) {
+                clearInterval(this.demoInterval);
+                this.demoInterval = null;
+            }
+        }
+
+        updateDisplay() {
+            this.updateProgress();
+            this.updateCurrentChapter();
+        }
+
+        downloadChapters() {
+            if (this.chapters.length === 0) return;
+            const blob = new Blob([JSON.stringify(this.chapters, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${this.getFilenameFromUrl(this.videoTitle.textContent || 'video')}_chapters.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        getFilenameFromUrl(url) {
+            try {
+                return new URL(url).pathname.split('/').pop();
+            } catch {
+                return url;
+            }
+        }
+
+        showLoading(text = 'Loading...') {
+            document.getElementById('loadingText').textContent = text;
+            this.loadingScreen.classList.remove('hidden');
+        }
+
+        hideLoading() { this.loadingScreen.classList.add('hidden'); }
+        showFileSelector() {
+            this.resetPlayer();
+            this.fileSelector.classList.remove('hidden');
+            this.videoContainer.style.display = 'none';
+        }
+        hideFileSelector() { this.fileSelector.classList.add('hidden'); }
+        showVideoContainer() { this.videoContainer.style.display = 'flex'; }
+        showError(message) {
+            this.errorMessage.textContent = message;
+            this.errorMessage.style.display = 'block';
+        }
+        clearError() { this.errorMessage.style.display = 'none'; }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new ChapterVideoPlayer();
+    });
+    </script>
+</body>
+</html>
